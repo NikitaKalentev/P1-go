@@ -33,11 +33,10 @@ func main() {
 				fmt.Println("Unable to fetch server statistic")
 				return
 			}
-			time.Sleep(100 * time.Millisecond) // Короткая пауза при ошибке
+			time.Sleep(100 * time.Millisecond)
 			continue
 		}
 
-		// Быстро читаем и обрабатываем ответ
 		body, err := io.ReadAll(resp.Body)
 		resp.Body.Close()
 		
@@ -72,8 +71,6 @@ func main() {
 
 		processStats(stats)
 		errorCount = 0
-		
-		// Очень короткая пауза между запросами
 		time.Sleep(50 * time.Millisecond)
 	}
 }
@@ -91,8 +88,8 @@ func processStats(stats []string) {
 		return
 	}
 
-	// Проверка Load Average
-	if loadAvg > loadAvgThreshold {
+	// Проверка Load Average - ИСПРАВЛЕНО: включая пороговое значение 30
+	if loadAvg >= loadAvgThreshold {
 		fmt.Printf("Load Average is too high: %.0f\n", loadAvg)
 	}
 
