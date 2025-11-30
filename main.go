@@ -1,10 +1,10 @@
+
 package main
 
 import (
 	"bufio"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -15,16 +15,18 @@ func main() {
 	errorCount := 0
 	maxErrors := 3
 
-	for {
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
 		// Выполняем HTTP GET запрос
 		resp, err := http.Get(url)
 		if err != nil {
 			errorCount++
 			if errorCount >= maxErrors {
 				fmt.Println("Unable to fetch server statistic")
-				os.Exit(1)
+				return
 			}
-			time.Sleep(5 * time.Second)
 			continue
 		}
 
@@ -34,9 +36,8 @@ func main() {
 			resp.Body.Close()
 			if errorCount >= maxErrors {
 				fmt.Println("Unable to fetch server statistic")
-				os.Exit(1)
+				return
 			}
-			time.Sleep(5 * time.Second)
 			continue
 		}
 
@@ -45,40 +46,52 @@ func main() {
 		if scanner.Scan() {
 			data := scanner.Text()
 			processStats(data)
+			// Сбрасываем счетчик ошибок при успешном запросе
+			errorCount = 0
 		} else {
 			errorCount++
 		}
 
 		resp.Body.Close()
 
-		// Сбрасываем счетчик ошибок при успешном запросе
-		if errorCount > 0 {
-			errorCount = 0
+		if errorCount >= maxErrors {
+			fmt.Println("Unable to fetch server statistic")
+			return
 		}
-
-		// Ждем перед следующим запросом
-		time.Sleep(5 * time.Second)
 	}
 }
 
 func processStats(data string) {
 	// Разделяем данные по запятым
-	values := strings.Split(data, ",")
+	values := strings.Split(strings.TrimSpace(data), ",")
 	if len(values) != 7 {
 		return // Неверный формат данных
 	}
 
-	// Парсим значения
-	loadAvg, err1 := strconv.ParseFloat(values[0], 64)
-	totalMem, err2 := strconv.ParseUint(values[1], 10, 64)
-	usedMem, err3 := strconv.ParseUint(values[2], 10, 64)
-	totalDisk, err4 := strconv.ParseUint(values[3], 10, 64)
-	usedDisk, err5 := strconv.ParseUint(values[4], 10, 64)
-	totalNet, err6 := strconv.ParseUint(values[5], 10, 64)
-	usedNet, err7 := strconv.ParseUint(values[6], 10, 64)
+	// Парсим значения с проверкой ошибок
+	var loadAvg float64
+	var totalMem, usedMem, totalDisk, usedDisk, totalNet, usedNet uint64
+	var parseErr error
 
-	// Проверяем ошибки парсинга
-	if err1 != nil || err2 != nil || err3 != nil || err4 != nil || err5 != nil || err6 != nil || err7 != nil {
+	if loadAvg, parseErr = strconv.ParseFloat(values[0], 64); parseErr != nil {
+		return
+	}
+	if totalMem, parseErr = strconv.ParseUint(values[1], 10, 64); parseErr != nil {
+		return
+	}
+	if usedMem, parseErr = strconv.ParseUint(values[2], 10, 64); parseErr != nil {
+		return
+	}
+	if totalDisk, parseErr = strconv.ParseUint(values[3], 10, 64); parseErr != nil {
+		return
+	}
+	if usedDisk, parseErr = strconv.ParseUint(values[4], 10, 64); parseErr != nil {
+		return
+	}
+	if totalNet, parseErr = strconv.ParseUint(values[5], 10, 64); parseErr != nil {
+		return
+	}
+	if usedNet, parseErr = strconv.ParseUint(values[6], 10, 64); parseErr != nil {
 		return
 	}
 
