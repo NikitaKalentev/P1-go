@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -21,7 +22,7 @@ func main() {
 			errorCount++
 			if errorCount >= maxErrors {
 				fmt.Println("Unable to fetch server statistic")
-				return
+				os.Exit(1)
 			}
 			time.Sleep(5 * time.Second)
 			continue
@@ -33,7 +34,7 @@ func main() {
 			resp.Body.Close()
 			if errorCount >= maxErrors {
 				fmt.Println("Unable to fetch server statistic")
-				return
+				os.Exit(1)
 			}
 			time.Sleep(5 * time.Second)
 			continue
