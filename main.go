@@ -16,7 +16,7 @@ const (
     diskUsageThreshold = 0.9
     networkUsageThreshold = 0.9
     retryLimit = 3
-    pollInterval = 60 * time.Second // опрос каждые 60 секунд
+    pollInterval = 60 * time.Second
 )
 
 func main() {
@@ -29,7 +29,6 @@ func main() {
             handleError(&errorCount)
             continue
         }
-        
         defer resp.Body.Close()
         
         if resp.StatusCode != http.StatusOK {
@@ -54,14 +53,13 @@ func main() {
         
         errorCount = 0
         
-        // Парсинг значений
         loadAvg, _ := strconv.ParseFloat(stats[0], 64)
         totalMem, _ := strconv.ParseFloat(stats[1], 64)
         usedMem, _ := strconv.ParseFloat(stats[2], 64)
         totalDisk, _ := strconv.ParseFloat(stats[3], 64)
         usedDisk, _ := strconv.ParseFloat(stats[4], 64)
         totalNetwork, _ := strconv.ParseFloat(stats[5], 64)
-        usedNetwork, _ := strconv.ParseFloat(stats[5], 64) // исправлено: должно быть stats[5]
+        usedNetwork, _ := strconv.ParseFloat(stats[5], 64)
         
         // Проверка Load Average
         if loadAvg > loadAvgThreshold {
@@ -92,7 +90,6 @@ func main() {
     }
 }
 
-// Функция обработки ошибок
 func handleError(errorCount *int) {
     *errorCount++
     if *errorCount >= retryLimit {
