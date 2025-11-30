@@ -17,13 +17,12 @@ const (
 	diskUsageThreshold    = 0.9
 	networkUsageThreshold = 0.9
 	retryLimit            = 3
-	pollInterval          = 1 * time.Second // Вернем к 1 секунде для надежности
 )
 
 func main() {
 	errorCount := 0
 	client := &http.Client{
-		Timeout: 5 * time.Second,
+		Timeout: 3 * time.Second,
 	}
 
 	for {
@@ -34,30 +33,29 @@ func main() {
 				fmt.Println("Unable to fetch server statistic")
 				return
 			}
-			time.Sleep(pollInterval)
+			time.Sleep(100 * time.Millisecond) // Короткая пауза при ошибке
 			continue
 		}
 
-		if resp.StatusCode != http.StatusOK {
-			errorCount++
-			resp.Body.Close()
-			if errorCount >= retryLimit {
-				fmt.Println("Unable to fetch server statistic")
-				return
-			}
-			time.Sleep(pollInterval)
-			continue
-		}
-
+		// Быстро читаем и обрабатываем ответ
 		body, err := io.ReadAll(resp.Body)
 		resp.Body.Close()
+		
 		if err != nil {
 			errorCount++
 			if errorCount >= retryLimit {
 				fmt.Println("Unable to fetch server statistic")
 				return
 			}
-			time.Sleep(pollInterval)
+			continue
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			errorCount++
+			if errorCount >= retryLimit {
+				fmt.Println("Unable to fetch server statistic")
+				return
+			}
 			continue
 		}
 
@@ -69,13 +67,14 @@ func main() {
 				fmt.Println("Unable to fetch server statistic")
 				return
 			}
-			time.Sleep(pollInterval)
 			continue
 		}
 
 		processStats(stats)
 		errorCount = 0
-		time.Sleep(pollInterval)
+		
+		// Очень короткая пауза между запросами
+		time.Sleep(50 * time.Millisecond)
 	}
 }
 
