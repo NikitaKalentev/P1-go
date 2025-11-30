@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 )
 
 const (
@@ -21,9 +20,7 @@ const (
 
 func main() {
 	errorCount := 0
-	client := &http.Client{
-		Timeout: 3 * time.Second,
-	}
+	client := &http.Client{}
 
 	for {
 		resp, err := client.Get(serverURL)
@@ -33,7 +30,6 @@ func main() {
 				fmt.Println("Unable to fetch server statistic")
 				return
 			}
-			time.Sleep(100 * time.Millisecond)
 			continue
 		}
 
@@ -71,7 +67,6 @@ func main() {
 
 		processStats(stats)
 		errorCount = 0
-		time.Sleep(50 * time.Millisecond)
 	}
 }
 
@@ -88,7 +83,7 @@ func processStats(stats []string) {
 		return
 	}
 
-	// Проверка Load Average - ИСПРАВЛЕНО: включая пороговое значение 30
+	// Проверка Load Average
 	if loadAvg >= loadAvgThreshold {
 		fmt.Printf("Load Average is too high: %.0f\n", loadAvg)
 	}
