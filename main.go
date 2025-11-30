@@ -103,9 +103,9 @@ func processStats(stats []string) {
 		networkUsage := float64(usedNetwork) / float64(totalNetwork)
 		if networkUsage > networkUsageThreshold {
 			// Свободная полоса в мегабитах в секунду
-			// Просто делим на 1,000,000 (без умножения на 8)
+			// Делим на 1,000,000 и округляем математически (не вниз!)
 			freeNetworkMbits := float64(totalNetwork-usedNetwork) / 1000000
-			fmt.Printf("Network bandwidth usage high: %.0f Mbit/s available\n", freeNetworkMbits)
+			fmt.Printf("Network bandwidth usage high: %.0f Mbit/s available\n", math.Round(freeNetworkMbits))
 		}
 	}
 }
