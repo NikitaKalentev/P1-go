@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -82,8 +83,8 @@ func processStats(stats []string) {
 	if totalMem > 0 {
 		memUsagePercent := float64(usedMem) / float64(totalMem) * 100
 		if memUsagePercent > memoryUsageThreshold*100 {
-			// Округляем вниз до целого процента
-			fmt.Printf("Memory usage too high: %.0f%%\n", float64(int(memUsagePercent)))
+			// Округляем до целого процента вниз
+			fmt.Printf("Memory usage too high: %.0f%%\n", math.Floor(memUsagePercent))
 		}
 	}
 
@@ -93,7 +94,7 @@ func processStats(stats []string) {
 		if diskUsage > diskUsageThreshold {
 			// Свободное место в мегабайтах (округляем вниз)
 			freeDiskMB := float64(totalDisk-usedDisk) / (1024 * 1024)
-			fmt.Printf("Free disk space is too low: %.0f Mb left\n", freeDiskMB)
+			fmt.Printf("Free disk space is too low: %.0f Mb left\n", math.Floor(freeDiskMB))
 		}
 	}
 
@@ -102,8 +103,8 @@ func processStats(stats []string) {
 		networkUsage := float64(usedNetwork) / float64(totalNetwork)
 		if networkUsage > networkUsageThreshold {
 			// Свободная полоса в мегабитах в секунду
-			// Используем деление на 125000 (1000000 / 8) для преобразования байтов в мегабиты
-			freeNetworkMbits := float64(totalNetwork-usedNetwork) / 125000
+			// Просто делим на 1,000,000 (без умножения на 8)
+			freeNetworkMbits := float64(totalNetwork-usedNetwork) / 1000000
 			fmt.Printf("Network bandwidth usage high: %.0f Mbit/s available\n", freeNetworkMbits)
 		}
 	}
