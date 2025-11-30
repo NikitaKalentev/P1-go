@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -20,7 +21,9 @@ const (
 
 func main() {
 	errorCount := 0
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 1 * time.Second,
+	}
 
 	for {
 		resp, err := client.Get(serverURL)
@@ -30,6 +33,7 @@ func main() {
 				fmt.Println("Unable to fetch server statistic")
 				return
 			}
+			time.Sleep(10 * time.Millisecond)
 			continue
 		}
 
@@ -67,6 +71,9 @@ func main() {
 
 		processStats(stats)
 		errorCount = 0
+		
+		// Оптимальная пауза - не слишком быстро, не слишком медленно
+		time.Sleep(80 * time.Millisecond)
 	}
 }
 
