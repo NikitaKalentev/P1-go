@@ -17,26 +17,34 @@ const (
 	diskUsageThreshold    = 0.9
 	networkUsageThreshold = 0.9
 	retryLimit            = 3
-	pollInterval          = 5 * time.Second
+	pollInterval          = 2 * time.Second // Уменьшили интервал для более частых запросов
 )
 
 func main() {
 	errorCount := 0
 
-	for {
+	// Увеличиваем время работы программы
+	ticker := time.NewTicker(pollInterval)
+	defer ticker.Stop()
+
+	for range ticker.C {
 		resp, err := http.Get(serverURL)
 		if err != nil {
 			errorCount++
-			handleError(&errorCount)
-			time.Sleep(pollInterval)
+			if errorCount >= retryLimit {
+				fmt.Println("Unable to fetch server statistic")
+				return
+			}
 			continue
 		}
 
 		if resp.StatusCode != http.StatusOK {
 			errorCount++
 			resp.Body.Close()
-			handleError(&errorCount)
-			time.Sleep(pollInterval)
+			if errorCount >= retryLimit {
+				fmt.Println("Unable to fetch server statistic")
+				return
+			}
 			continue
 		}
 
@@ -46,18 +54,20 @@ func main() {
 			stats := strings.Split(strings.TrimSpace(data), ",")
 			if len(stats) == 7 {
 				processStats(stats)
-				errorCount = 0
+				errorCount = 0 // Сбрасываем счетчик ошибок
 			} else {
 				errorCount++
-				handleError(&errorCount)
 			}
 		} else {
 			errorCount++
-			handleError(&errorCount)
 		}
 
 		resp.Body.Close()
-		time.Sleep(pollInterval)
+
+		if errorCount >= retryLimit {
+			fmt.Println("Unable to fetch server statistic")
+			return
+		}
 	}
 }
 
@@ -102,16 +112,9 @@ func processStats(stats []string) {
 	if totalNetwork > 0 {
 		networkUsage := float64(usedNetwork) / float64(totalNetwork)
 		if networkUsage > networkUsageThreshold {
-			// Свободная полоса в мегабитах в секунду
-			// Делим на 1,000,000 и округляем математически (не вниз!)
+			// Свободная полоса в мегабитах в секунду (округляем вниз)
 			freeNetworkMbits := float64(totalNetwork-usedNetwork) / 1000000
-			fmt.Printf("Network bandwidth usage high: %.0f Mbit/s available\n", math.Round(freeNetworkMbits))
+			fmt.Printf("Network bandwidth usage high: %.0f Mbit/s available\n", math.Floor(freeNetworkMbits))
 		}
-	}
-}
-
-func handleError(errorCount *int) {
-	if *errorCount >= retryLimit {
-		fmt.Println("Unable to fetch server statistic")
 	}
 }
