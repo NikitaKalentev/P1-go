@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"math"
 	"net/http"
 	"strconv"
@@ -17,57 +18,55 @@ const (
 	diskUsageThreshold    = 0.9
 	networkUsageThreshold = 0.9
 	retryLimit            = 3
-	pollInterval          = 2 * time.Second // Уменьшили интервал для более частых запросов
+	pollInterval          = 500 * time.Millisecond // Уменьшаем интервал до 0.5 секунды
+	timeout               = 2 * time.Second        // Таймаут для HTTP запроса
 )
 
 func main() {
 	errorCount := 0
+	client := &http.Client{
+		Timeout: timeout,
+	}
 
-	// Увеличиваем время работы программы
 	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
 
 	for range ticker.C {
-		resp, err := http.Get(serverURL)
-		if err != nil {
-			errorCount++
-			if errorCount >= retryLimit {
-				fmt.Println("Unable to fetch server statistic")
-				return
-			}
-			continue
-		}
-
-		if resp.StatusCode != http.StatusOK {
-			errorCount++
-			resp.Body.Close()
-			if errorCount >= retryLimit {
-				fmt.Println("Unable to fetch server statistic")
-				return
-			}
-			continue
-		}
-
-		scanner := bufio.NewScanner(resp.Body)
-		if scanner.Scan() {
-			data := scanner.Text()
-			stats := strings.Split(strings.TrimSpace(data), ",")
-			if len(stats) == 7 {
-				processStats(stats)
-				errorCount = 0 // Сбрасываем счетчик ошибок
-			} else {
+		func() {
+			resp, err := client.Get(serverURL)
+			if err != nil {
 				errorCount++
+				if errorCount >= retryLimit {
+					fmt.Println("Unable to fetch server statistic")
+				}
+				return
 			}
-		} else {
-			errorCount++
-		}
+			defer resp.Body.Close()
 
-		resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				errorCount++
+				if errorCount >= retryLimit {
+					fmt.Println("Unable to fetch server statistic")
+				}
+				return
+			}
 
-		if errorCount >= retryLimit {
-			fmt.Println("Unable to fetch server statistic")
-			return
-		}
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				errorCount++
+				return
+			}
+
+			data := strings.TrimSpace(string(body))
+			stats := strings.Split(data, ",")
+			if len(stats) != 7 {
+				errorCount++
+				return
+			}
+
+			processStats(stats)
+			errorCount = 0 // Сбрасываем счетчик ошибок при успешном запросе
+		}()
 	}
 }
 
