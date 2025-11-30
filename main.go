@@ -5,7 +5,6 @@ import (
 	"io"
 	"math"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 )
@@ -87,7 +86,6 @@ func processStats(stats []string) {
 	// Проверка Load Average
 	if loadAvg >= loadAvgThreshold {
 		fmt.Printf("Load Average is too high: %.0f\n", loadAvg)
-		flushOutput()
 	}
 
 	// Проверка использования памяти
@@ -95,7 +93,6 @@ func processStats(stats []string) {
 		memUsagePercent := float64(usedMem) / float64(totalMem) * 100
 		if memUsagePercent > memoryUsageThreshold*100 {
 			fmt.Printf("Memory usage too high: %.0f%%\n", math.Floor(memUsagePercent))
-			flushOutput()
 		}
 	}
 
@@ -105,7 +102,6 @@ func processStats(stats []string) {
 		if diskUsage > diskUsageThreshold {
 			freeDiskMB := float64(totalDisk-usedDisk) / (1024 * 1024)
 			fmt.Printf("Free disk space is too low: %.0f Mb left\n", math.Floor(freeDiskMB))
-			flushOutput()
 		}
 	}
 
@@ -115,14 +111,6 @@ func processStats(stats []string) {
 		if networkUsage > networkUsageThreshold {
 			freeNetworkMbits := float64(totalNetwork-usedNetwork) / 1000000
 			fmt.Printf("Network bandwidth usage high: %.0f Mbit/s available\n", math.Floor(freeNetworkMbits))
-			flushOutput()
 		}
-	}
-}
-
-// flushOutput принудительно сбрасывает буфер вывода
-func flushOutput() {
-	if f, ok := fmt.Stdout.(*os.File); ok {
-		f.Sync()
 	}
 }
