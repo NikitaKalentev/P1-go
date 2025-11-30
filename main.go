@@ -68,13 +68,18 @@ func processStats(data string) {
 	}
 
 	// Парсим значения
-	loadAvg, _ := strconv.ParseFloat(values[0], 64)
-	totalMem, _ := strconv.ParseUint(values[1], 10, 64)
-	usedMem, _ := strconv.ParseUint(values[2], 10, 64)
-	totalDisk, _ := strconv.ParseUint(values[3], 10, 64)
-	usedDisk, _ := strconv.ParseUint(values[4], 10, 64)
-	totalNet, _ := strconv.ParseUint(values[5], 10, 64)
-	usedNet, _ := strconv.ParseUint(values[6], 10, 64)
+	loadAvg, err1 := strconv.ParseFloat(values[0], 64)
+	totalMem, err2 := strconv.ParseUint(values[1], 10, 64)
+	usedMem, err3 := strconv.ParseUint(values[2], 10, 64)
+	totalDisk, err4 := strconv.ParseUint(values[3], 10, 64)
+	usedDisk, err5 := strconv.ParseUint(values[4], 10, 64)
+	totalNet, err6 := strconv.ParseUint(values[5], 10, 64)
+	usedNet, err7 := strconv.ParseUint(values[6], 10, 64)
+
+	// Проверяем ошибки парсинга
+	if err1 != nil || err2 != nil || err3 != nil || err4 != nil || err5 != nil || err6 != nil || err7 != nil {
+		return
+	}
 
 	// Проверяем Load Average
 	if loadAvg > 30 {
