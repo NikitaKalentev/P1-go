@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"math"
@@ -18,55 +17,65 @@ const (
 	diskUsageThreshold    = 0.9
 	networkUsageThreshold = 0.9
 	retryLimit            = 3
-	pollInterval          = 500 * time.Millisecond // Уменьшаем интервал до 0.5 секунды
-	timeout               = 2 * time.Second        // Таймаут для HTTP запроса
+	pollInterval          = 1 * time.Second // Вернем к 1 секунде для надежности
 )
 
 func main() {
 	errorCount := 0
 	client := &http.Client{
-		Timeout: timeout,
+		Timeout: 5 * time.Second,
 	}
 
-	ticker := time.NewTicker(pollInterval)
-	defer ticker.Stop()
-
-	for range ticker.C {
-		func() {
-			resp, err := client.Get(serverURL)
-			if err != nil {
-				errorCount++
-				if errorCount >= retryLimit {
-					fmt.Println("Unable to fetch server statistic")
-				}
+	for {
+		resp, err := client.Get(serverURL)
+		if err != nil {
+			errorCount++
+			if errorCount >= retryLimit {
+				fmt.Println("Unable to fetch server statistic")
 				return
 			}
-			defer resp.Body.Close()
+			time.Sleep(pollInterval)
+			continue
+		}
 
-			if resp.StatusCode != http.StatusOK {
-				errorCount++
-				if errorCount >= retryLimit {
-					fmt.Println("Unable to fetch server statistic")
-				}
+		if resp.StatusCode != http.StatusOK {
+			errorCount++
+			resp.Body.Close()
+			if errorCount >= retryLimit {
+				fmt.Println("Unable to fetch server statistic")
 				return
 			}
+			time.Sleep(pollInterval)
+			continue
+		}
 
-			body, err := io.ReadAll(resp.Body)
-			if err != nil {
-				errorCount++
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			errorCount++
+			if errorCount >= retryLimit {
+				fmt.Println("Unable to fetch server statistic")
 				return
 			}
+			time.Sleep(pollInterval)
+			continue
+		}
 
-			data := strings.TrimSpace(string(body))
-			stats := strings.Split(data, ",")
-			if len(stats) != 7 {
-				errorCount++
+		data := strings.TrimSpace(string(body))
+		stats := strings.Split(data, ",")
+		if len(stats) != 7 {
+			errorCount++
+			if errorCount >= retryLimit {
+				fmt.Println("Unable to fetch server statistic")
 				return
 			}
+			time.Sleep(pollInterval)
+			continue
+		}
 
-			processStats(stats)
-			errorCount = 0 // Сбрасываем счетчик ошибок при успешном запросе
-		}()
+		processStats(stats)
+		errorCount = 0
+		time.Sleep(pollInterval)
 	}
 }
 
@@ -92,7 +101,6 @@ func processStats(stats []string) {
 	if totalMem > 0 {
 		memUsagePercent := float64(usedMem) / float64(totalMem) * 100
 		if memUsagePercent > memoryUsageThreshold*100 {
-			// Округляем до целого процента вниз
 			fmt.Printf("Memory usage too high: %.0f%%\n", math.Floor(memUsagePercent))
 		}
 	}
@@ -101,7 +109,6 @@ func processStats(stats []string) {
 	if totalDisk > 0 {
 		diskUsage := float64(usedDisk) / float64(totalDisk)
 		if diskUsage > diskUsageThreshold {
-			// Свободное место в мегабайтах (округляем вниз)
 			freeDiskMB := float64(totalDisk-usedDisk) / (1024 * 1024)
 			fmt.Printf("Free disk space is too low: %.0f Mb left\n", math.Floor(freeDiskMB))
 		}
@@ -111,7 +118,6 @@ func processStats(stats []string) {
 	if totalNetwork > 0 {
 		networkUsage := float64(usedNetwork) / float64(totalNetwork)
 		if networkUsage > networkUsageThreshold {
-			// Свободная полоса в мегабитах в секунду (округляем вниз)
 			freeNetworkMbits := float64(totalNetwork-usedNetwork) / 1000000
 			fmt.Printf("Network bandwidth usage high: %.0f Mbit/s available\n", math.Floor(freeNetworkMbits))
 		}
